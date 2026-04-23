@@ -24,6 +24,8 @@ This repository now contains the first read-only MVP baseline: reproducible inve
 - Repository scaffold directories for `docs/`, `scripts/`, `src/`, `tests/`, and `artifacts/` are present.
 - ERAS MDB discovery found `54` MDB/ACCDB candidates and created `54/54` hash-matching analysis copies.
 - ERAS schema extraction is partial: `183` table rows across `20` databases, with `32` ODBC UTF-16 warnings.
+- MDB candidate accounting is explicit: `54` discovered/scored candidate rows, `52` unique analysis path strings, and `51` normalized analysis keys.
+- `CLIENT\client.mdb` is the top metadata-only candidate, but no authoritative MDB has been declared.
 - The latest read-only PowerMap inventory reports `2` executables, `2` workspace candidates, and one active gap: Python Manager was not found.
 - The read-only MCP facade initializes with `mcp==1.27.0` and reads current artifacts without executing Bentley/OpenCities commands.
 
@@ -122,6 +124,7 @@ If the Python user scripts directory is not on `PATH`, use:
 python -m mcp_server env-status
 python -m mcp_server build-gap-report
 python -m mcp_server eras-rank-databases --limit 10
+python -m mcp_server eras-explain-database --path "C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb"
 ```
 
 The CLI and MCP facade read existing artifacts by default. They do not rerun scans, write MDB files, or execute Bentley/OpenCities commands.
@@ -129,11 +132,15 @@ The CLI and MCP facade read existing artifacts by default. They do not rerun sca
 ## ERAS MDB Candidate Ranking
 
 - `eras-rank-databases` ranks MDB candidates using metadata only.
+- `eras-explain-database` explains one candidate using score reasons and table metadata only.
 - The ranking is a review aid, not an authoritative database declaration.
 - Curated outputs:
   - `docs/reports/eras_mdb_authoritative_candidates_20260423.md`
+  - `docs/reports/eras_mdb_candidate_review_20260423.md`
+  - `docs/reports/eras_mdb_odbc_warning_triage_20260423.md`
   - `docs/schemas/ERAS_MDB_CANDIDATE_SCORECARD.csv`
   - `docs/evidence/ev-009-eras-authoritative-candidates.md`
+  - `docs/evidence/ev-010-eras-mdb-human-review-pack.md`
 
 ## Next Links
 
@@ -143,6 +150,8 @@ The CLI and MCP facade read existing artifacts by default. They do not rerun sca
 - MVP baseline: `docs/reports/mvp_readonly_baseline_20260423.md`
 - Current gaps: `docs/reports/mvp_gap_report_20260423.md`
 - ERAS MDB ranking: `docs/reports/eras_mdb_authoritative_candidates_20260423.md`
+- ERAS MDB human review: `docs/reports/eras_mdb_candidate_review_20260423.md`
+- ERAS MDB warning triage: `docs/reports/eras_mdb_odbc_warning_triage_20260423.md`
 
 ## Read-Only MCP Facade Notes (Worker E)
 

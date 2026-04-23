@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sys
 from pathlib import Path
@@ -12,6 +14,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from mcp_server.facade import MCPFacade
+from mcp_server import cli as cli_module
 from services import ArtifactStore, SearchBounds
 
 
@@ -146,6 +149,39 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
             self.assertEqual(tables["table_count"], 1)
             self.assertEqual(tables["tables"][0]["table_name"], "Asset")
 
+    def test_eras_database_counts_distinguish_candidates_paths_and_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            exports = repo / "artifacts" / "exports"
+            exports.mkdir(parents=True, exist_ok=True)
+            (exports / "ERAS_MDB_DISCOVERY.csv").write_text(
+                "\n".join(
+                    [
+                        "source_path,extension,file_size_bytes,modified_utc,source_sha256,analysis_path,analysis_sha256,hash_match",
+                        r"C:\src\a.mdb,.mdb,10,2026-04-23T10:00:00Z,sha1,C:\work\a.mdb,sha1,True",
+                        r"C:\src\a-copy.mdb,.mdb,10,2026-04-23T10:00:00Z,sha1,C:\work\a.mdb,sha1,True",
+                        r"C:\src\b.mdb,.mdb,20,2026-04-23T10:00:00Z,sha2,C:\work\B.mdb,sha2,True",
+                        r"C:\src\b-lower.mdb,.mdb,20,2026-04-23T10:00:00Z,sha2,C:\work\b.mdb,sha2,True",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_TABLES.csv").write_text(
+                "database_path,table_name,row_count,column_count,primary_key_columns,index_count\n",
+                encoding="utf-8",
+            )
+
+            facade = MCPFacade(repo_root=repo)
+            status = facade.env_status()
+            databases = facade.eras_list_databases()
+
+            self.assertEqual(status["counts"]["eras_candidate_count"], 4)
+            self.assertEqual(status["counts"]["eras_unique_analysis_path_count"], 3)
+            self.assertEqual(status["counts"]["eras_unique_analysis_key_count"], 2)
+            self.assertEqual(databases["counts"]["candidate_count"], 4)
+            self.assertEqual(databases["counts"]["unique_analysis_path_count"], 3)
+            self.assertEqual(databases["counts"]["unique_analysis_key_count"], 2)
+
     def test_powermap_status_and_workspaces_from_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
@@ -250,6 +286,103 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
             self.assertEqual(result["counts"]["candidate_count"], 2)
             self.assertEqual(result["counts"]["returned_count"], 1)
             self.assertEqual(result["candidates"][0]["source_path"], r"C:\App\CLIENT\a.mdb")
+
+    def test_eras_explain_database_returns_metadata_only_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            exports = repo / "artifacts" / "exports"
+            exports.mkdir(parents=True, exist_ok=True)
+            (exports / "ERAS_MDB_DISCOVERY.csv").write_text(
+                "\n".join(
+                    [
+                        "source_path,extension,file_size_bytes,modified_utc,source_sha256,analysis_path,analysis_sha256,hash_match",
+                        r"C:\App\CLIENT\a.mdb,.mdb,100,2026-04-20T00:00:00+00:00,sha1,C:\work\a.mdb,sha1,True",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_TABLES.csv").write_text(
+                "\n".join(
+                    [
+                        "database_path,table_name,row_count,column_count,primary_key_columns,index_count",
+                        r"C:\work\a.mdb,Asset,12,5,id,1",
+                        r"C:\work\a.mdb,Site,30,4,,0",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_SCHEMA.md").write_text("", encoding="utf-8")
+
+            facade = MCPFacade(repo_root=repo)
+            result = facade.eras_explain_database(r"C:\App\CLIENT\a.mdb")
+
+            self.assertTrue(result["read_only"])
+            self.assertEqual(result["decision_status"], "candidate_ranking_only")
+            self.assertEqual(result["data_policy"], "metadata_only_no_business_row_values")
+            self.assertEqual(result["match_strategy"], "exact_source_path")
+            self.assertEqual(result["counts"]["match_count"], 1)
+            self.assertEqual(result["counts"]["table_count"], 2)
+            self.assertEqual(result["candidate"]["source_path"], r"C:\App\CLIENT\a.mdb")
+            self.assertEqual(result["tables"][0]["table_name"], "Asset")
+            self.assertNotIn("row_values", result)
+            self.assertNotIn("sample_rows", json.dumps(result))
+
+    def test_eras_explain_database_reports_ambiguous_basename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            exports = repo / "artifacts" / "exports"
+            exports.mkdir(parents=True, exist_ok=True)
+            (exports / "ERAS_MDB_DISCOVERY.csv").write_text(
+                "\n".join(
+                    [
+                        "source_path,extension,file_size_bytes,modified_utc,source_sha256,analysis_path,analysis_sha256,hash_match",
+                        r"C:\App\CLIENT\a.mdb,.mdb,100,2026-04-20T00:00:00+00:00,sha1,C:\work\a1.mdb,sha1,True",
+                        r"C:\App\SYSTEME\a.mdb,.mdb,100,2026-04-20T00:00:00+00:00,sha2,C:\work\a2.mdb,sha2,True",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_TABLES.csv").write_text(
+                "database_path,table_name,row_count,column_count,primary_key_columns,index_count\n",
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_SCHEMA.md").write_text("", encoding="utf-8")
+
+            result = MCPFacade(repo_root=repo).eras_explain_database("a.mdb")
+
+            self.assertIsNone(result["candidate"])
+            self.assertEqual(result["match_strategy"], "basename")
+            self.assertEqual(result["counts"]["match_count"], 2)
+            self.assertIn("disambiguate", result["warnings"][0])
+
+    def test_cli_eras_explain_database_dispatches_to_facade(self) -> None:
+        class FakeFacade:
+            def eras_explain_database(self, database_path: str) -> dict[str, object]:
+                return {
+                    "generated_at_utc": "2026-04-23T00:00:00+00:00",
+                    "read_only": True,
+                    "source_artifact": {},
+                    "warnings": [],
+                    "counts": {"match_count": 1},
+                    "decision_status": "candidate_ranking_only",
+                    "database_path": database_path,
+                }
+
+        original_facade = cli_module.MCPFacade
+        cli_module.MCPFacade = FakeFacade  # type: ignore[assignment]
+        try:
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = cli_module.main(
+                    ["eras-explain-database", "--path", r"C:\App\CLIENT\a.mdb"]
+                )
+        finally:
+            cli_module.MCPFacade = original_facade
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["database_path"], r"C:\App\CLIENT\a.mdb")
+        self.assertEqual(payload["decision_status"], "candidate_ranking_only")
 
 
 if __name__ == "__main__":

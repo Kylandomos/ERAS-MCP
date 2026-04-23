@@ -36,6 +36,13 @@ Generated: 2026-04-23
 - Top score: `66`
 - Top candidate: `C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb`
 
+## Candidate Accounting
+
+- The scorecard keeps `54` discovered source candidate rows.
+- Current metadata exposes `52` unique analysis path strings and `51` normalized analysis keys.
+- This difference is expected because some repeated source paths share the same hash-derived analysis copy.
+- Human review uses the `54` source candidates because source location is part of the decision evidence.
+
 ## Top Candidates
 
 | Rank | Score | Confidence | Source path | Tables | Rows | Warning |
@@ -61,6 +68,8 @@ Generated: 2026-04-23
 
 - Full scorecard: `docs/schemas/ERAS_MDB_CANDIDATE_SCORECARD.csv`
 - Schema evidence: `docs/schemas/ERAS_MDB_SCHEMA.md`
+- Human review pack: `docs/reports/eras_mdb_candidate_review_20260423.md`
+- ODBC warning triage: `docs/reports/eras_mdb_odbc_warning_triage_20260423.md`
 - Discovery source: local-only `artifacts/exports/ERAS_MDB_DISCOVERY.csv`
 - Tables source: local-only `artifacts/exports/ERAS_MDB_TABLES.csv`
 

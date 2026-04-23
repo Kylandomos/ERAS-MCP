@@ -8,6 +8,7 @@ Last updated: 2026-04-23
 - The project starts with incomplete knowledge of the target workstation.
 - Current MVP baseline has partial MDB extraction and one active PowerMap gap.
 - Current MDB ranking is candidate-only and must not be treated as an authoritative decision.
+- Current human review pack keeps all MDB decisions in `candidate_ranking_only` state until reviewer input is recorded.
 
 ## Hypotheses
 
@@ -39,6 +40,8 @@ Last updated: 2026-04-23
 | R-010 | Medium | MCP output contract drift | Tool responses omit envelope metadata | Tests assert `read_only`, `source_artifact`, `generated_at_utc`, `warnings`, and `counts` | Unit tests pass | `EVIDENCE_INDEX.md#ev-008` |
 | R-011 | Medium | Candidate score is mistaken for authoritative selection | Downstream code treats rank 1 as final truth | Add `decision_status=candidate_ranking_only` and keep validation backlog item open | Reports and API clearly label candidate-only status | `EVIDENCE_INDEX.md#ev-009` |
 | R-012 | Medium | Metadata-only ranking misses business semantics | High score comes from path/table metadata but not actual workflow usage | Require human validation before semantic modeling or cross-domain checks | Top candidates reviewed with stakeholder/process evidence | `EVIDENCE_INDEX.md#ev-009` |
+| R-013 | Medium | Human review pack becomes stale | New scans or exports are generated after the review pack date | Regenerate review pack from current scorecard before using decisions | Review pack date and source artifacts match current cycle | `EVIDENCE_INDEX.md#ev-010` |
+| R-014 | Medium | Ambiguous MDB counts create false exclusions | Unique analysis path/key counts are mistaken for total candidates | Expose `eras_candidate_count`, `eras_unique_analysis_path_count`, and `eras_unique_analysis_key_count`; retain 54 source candidate rows in review docs | CLI/API and docs show all counts explicitly | `EVIDENCE_INDEX.md#ev-010` |
 
 ## Review Cadence
 

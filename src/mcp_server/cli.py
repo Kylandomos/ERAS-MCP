@@ -71,6 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Return every ranked candidate.",
     )
+    eras_explain_parser = subparsers.add_parser(
+        "eras-explain-database",
+        help="Explain one ranked ERAS MDB candidate using metadata only.",
+    )
+    eras_explain_parser.add_argument(
+        "--path",
+        required=True,
+        help="Full source_path or analysis_path of the MDB candidate to explain.",
+    )
     subparsers.add_parser("powermap-status", help="Summarize PowerMap inventory status.")
     subparsers.add_parser(
         "powermap-list-workspaces", help="List PowerMap workspace path candidates."
@@ -106,6 +115,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "eras-rank-databases":
         _dump_json(facade.eras_rank_databases(limit=args.limit, include_all=args.all))
+        return 0
+    if args.command == "eras-explain-database":
+        _dump_json(facade.eras_explain_database(database_path=args.path))
         return 0
     if args.command == "powermap-status":
         _dump_json(facade.powermap_status())

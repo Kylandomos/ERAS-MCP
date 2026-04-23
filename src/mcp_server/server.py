@@ -55,6 +55,10 @@ def create_mcp_stdio_server(
         )
 
     @server.tool()
+    def eras_explain_database(source_path: str) -> dict[str, Any]:
+        return active_facade.eras_explain_database(database_path=source_path)
+
+    @server.tool()
     def powermap_status() -> dict[str, Any]:
         return active_facade.powermap_status()
 

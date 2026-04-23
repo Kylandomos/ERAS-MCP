@@ -20,9 +20,12 @@ ERAS MDB candidates can be ranked deterministically from metadata-only evidence,
 - Top score: `66`
 - Candidates with schema warnings: `32`
 - Candidates with no extracted tables: `32`
+- Unique analysis path strings: `52`
+- Unique normalized analysis keys: `51`
 
 ## Limits
 
 - Ranking is not an authoritative decision.
 - No business row values or data samples were read.
 - ODBC warning-heavy candidates remain P1 follow-up work.
+- Human review packaging is tracked separately in `docs/evidence/ev-010-eras-mdb-human-review-pack.md`.

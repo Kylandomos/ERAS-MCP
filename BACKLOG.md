@@ -10,6 +10,7 @@ Last updated: 2026-04-23
 - Current MDB evidence: `54` candidates, `54/54` hash matches, `183` table rows across `20` databases, `32` ODBC warnings.
 - Current PowerMap evidence: Python Manager was not found by read-only scan.
 - Current MDB ranking evidence: `CLIENT\client.mdb` is top-ranked by metadata-only score, but not declared authoritative.
+- Current MDB review evidence: `54` candidate rows are retained for human review, with `52` unique analysis path strings and `51` normalized analysis keys.
 
 ## Hypotheses
 
@@ -45,6 +46,9 @@ Last updated: 2026-04-23
 | BL-013 | P1 | Authoritative MDB selection | Candidate MDB priority rule or stakeholder decision identifies the ERAS MDB(s) to use for semantic modeling | `EVIDENCE_INDEX.md#ev-003` |
 | BL-014 | P0 | MDB candidate ranking | Metadata-only scorecard and MCP/CLI ranking endpoint rank all 54 candidates without reading row values | `EVIDENCE_INDEX.md#ev-009` |
 | BL-015 | P1 | Validate top-ranked MDB candidates | Human review confirms whether `CLIENT\client.mdb` is operationally meaningful or only reference/configuration data | `EVIDENCE_INDEX.md#ev-009` |
+| BL-016 | P0 | MDB candidate human review pack | Review pack and ODBC warning triage list candidate statuses, top-candidate explanation, and warning priorities without reading row values | `EVIDENCE_INDEX.md#ev-010` |
+| BL-017 | P1 | Record human review decisions | Top candidates receive explicit `accept_review`, `reject_review`, or `needs_followup` decisions before semantic modeling | `EVIDENCE_INDEX.md#ev-010` |
+| BL-018 | P1 | Alternate extraction decision for warning candidates | Human triage decides whether P1-A/P1-B UTF-16 warning cases justify alternate Access/ODBC extraction work | `EVIDENCE_INDEX.md#ev-010` |
 
 ## Exit Criteria for Backlog v0.1
 

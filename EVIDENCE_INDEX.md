@@ -10,6 +10,7 @@ Last updated: 2026-04-23
 - Curated MVP evidence reports now exist under `docs/reports/` and `docs/schemas/`.
 - Raw/generated artifacts remain local-only by Git ignore policy.
 - ERAS MDB candidate ranking is tracked as candidate-only evidence, not an authoritative decision.
+- ERAS MDB human review and ODBC warning triage are tracked without promoting rank `1` to an authoritative decision.
 
 ## Hypotheses
 
@@ -45,6 +46,7 @@ Last updated: 2026-04-23
 | EV-007 | Evidence indexing process is consistently applied | `docs/evidence/ev-007-evidence-process-audit.md` | validated | Current cycle |
 | EV-008 | Read-only MCP facade exposes artifact-backed inspection tools | `docs/evidence/ev-008-mcp-facade.md` | validated | Current cycle |
 | EV-009 | ERAS MDB authoritative candidates are ranked from metadata-only evidence | `docs/evidence/ev-009-eras-authoritative-candidates.md` | validated-candidate-ranking | Current cycle |
+| EV-010 | ERAS MDB candidate ranking is packaged for human review and ODBC warning triage | `docs/evidence/ev-010-eras-mdb-human-review-pack.md` | validated-review-pack | Current cycle |
 
 ## Latest Evidence Note
 
@@ -58,13 +60,20 @@ Last updated: 2026-04-23
   - Databases with extracted tables: `20`
   - ODBC warning cases: `32`
 - `EV-008`:
-  - Unit tests: `13` passing
+  - Unit tests: `22` passing
   - MCP stdio server factory initializes with `mcp==1.27.0`
   - CLI output envelope includes `read_only`, `source_artifact`, `generated_at_utc`, `warnings`, and `counts`
 - `EV-009`:
   - Candidates ranked: `54`
   - Top-ranked candidate: `C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb`
   - Decision status: `candidate_ranking_only`
+- `EV-010`:
+  - Human review pack: `docs/reports/eras_mdb_candidate_review_20260423.md`
+  - ODBC warning triage: `docs/reports/eras_mdb_odbc_warning_triage_20260423.md`
+  - Candidate rows retained for review: `54`
+  - Unique analysis path strings: `52`
+  - Unique normalized analysis keys: `51`
+  - Explanation CLI/API: `eras-explain-database`
 
 ## Acceptance Criteria (v0.1)
 

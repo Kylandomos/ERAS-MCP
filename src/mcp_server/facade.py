@@ -46,6 +46,15 @@ def _as_int(value: str | int | None) -> int | None:
         return None
 
 
+def _path_key(value: str | None) -> str:
+    return (value or "").replace("/", "\\").strip().lower()
+
+
+def _path_name(value: str | None) -> str:
+    normalized = (value or "").replace("/", "\\").strip()
+    return normalized.rsplit("\\", 1)[-1].lower()
+
+
 def _now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -121,19 +130,24 @@ class MCPFacade:
         discovery_rows = self.store.read_export_csv("ERAS_MDB_DISCOVERY.csv")
         table_rows = self.store.read_export_csv("ERAS_MDB_TABLES.csv")
         schema_warning_count = self._schema_warning_count()
+        analysis_paths = [
+            row.get("analysis_path") or row.get("source_path")
+            for row in discovery_rows
+            if row.get("analysis_path") or row.get("source_path")
+        ]
+        unique_analysis_path_count = len(set(analysis_paths))
+        unique_analysis_key_count = len({_path_key(path) for path in analysis_paths})
         warnings = self._powermap_warnings(inventory)
         if schema_warning_count:
             warnings.append(
                 f"{schema_warning_count} ERAS MDB schema analyses reported ODBC warnings."
             )
         counts = {
-            "eras_database_count": len(
-                {
-                    row.get("analysis_path") or row.get("source_path")
-                    for row in discovery_rows
-                    if row.get("analysis_path") or row.get("source_path")
-                }
-            ),
+            "eras_candidate_count": len(discovery_rows),
+            "eras_unique_analysis_path_count": unique_analysis_path_count,
+            "eras_unique_analysis_key_count": unique_analysis_key_count,
+            "eras_unique_analysis_database_count": unique_analysis_path_count,
+            "eras_database_count": unique_analysis_path_count,
             "eras_table_count": len(table_rows),
             "schema_warning_count": schema_warning_count,
             "powermap_gap_count": powermap.status().get("gap_count", 0),
@@ -158,6 +172,14 @@ class MCPFacade:
             "eras_discovery_available": bool(discovery_rows),
             "eras_tables_available": bool(table_rows),
             "eras_database_count": counts["eras_database_count"],
+            "eras_candidate_count": counts["eras_candidate_count"],
+            "eras_unique_analysis_path_count": counts[
+                "eras_unique_analysis_path_count"
+            ],
+            "eras_unique_analysis_key_count": counts["eras_unique_analysis_key_count"],
+            "eras_unique_analysis_database_count": counts[
+                "eras_unique_analysis_database_count"
+            ],
             "eras_table_count": counts["eras_table_count"],
             "powermap": powermap.status(),
         }
@@ -245,6 +267,11 @@ class MCPFacade:
         rows = self.store.read_export_csv("ERAS_MDB_DISCOVERY.csv")
         databases: list[dict[str, Any]] = []
         seen_keys: set[str] = set()
+        analysis_paths = [
+            row.get("analysis_path") or row.get("source_path")
+            for row in rows
+            if row.get("analysis_path") or row.get("source_path")
+        ]
 
         for row in rows:
             preferred_path = row.get("analysis_path") or row.get("source_path")
@@ -270,6 +297,8 @@ class MCPFacade:
         hash_mismatch_count = len(
             [item for item in databases if not item.get("hash_match")]
         )
+        unique_analysis_path_count = len(set(analysis_paths))
+        unique_analysis_key_count = len({_path_key(path) for path in analysis_paths})
         return {
             "generated_at_utc": _now_utc(),
             "read_only": True,
@@ -281,10 +310,18 @@ class MCPFacade:
             ),
             "counts": {
                 "database_count": len(databases),
+                "candidate_count": len(rows),
+                "unique_analysis_path_count": unique_analysis_path_count,
+                "unique_analysis_key_count": unique_analysis_key_count,
+                "unique_analysis_database_count": len(databases),
                 "hash_match_count": len(databases) - hash_mismatch_count,
                 "hash_mismatch_count": hash_mismatch_count,
             },
             "database_count": len(databases),
+            "candidate_count": len(rows),
+            "unique_analysis_path_count": unique_analysis_path_count,
+            "unique_analysis_key_count": unique_analysis_key_count,
+            "unique_analysis_database_count": len(databases),
             "databases": sorted(
                 databases,
                 key=lambda item: (
@@ -380,6 +417,109 @@ class MCPFacade:
             "limit": safe_limit,
             "include_all": include_all,
             "candidates": [item.to_dict() for item in selected],
+        }
+
+    def eras_explain_database(self, database_path: str) -> dict[str, Any]:
+        query = (database_path or "").strip()
+        discovery_rows = self.store.read_export_csv("ERAS_MDB_DISCOVERY.csv")
+        table_rows = self.store.read_export_csv("ERAS_MDB_TABLES.csv")
+        schema_text = self._schema_text()
+        ranked = rank_mdb_candidates(
+            discovery_rows=discovery_rows,
+            table_rows=table_rows,
+            schema_text=schema_text,
+        )
+
+        match_strategy = "none"
+        matches = []
+        query_key = _path_key(query)
+        if query_key:
+            source_matches = [
+                item for item in ranked if _path_key(item.source_path) == query_key
+            ]
+            analysis_matches = [
+                item for item in ranked if _path_key(item.analysis_path) == query_key
+            ]
+            if source_matches:
+                matches = source_matches
+                match_strategy = "exact_source_path"
+            elif analysis_matches:
+                matches = analysis_matches
+                match_strategy = "exact_analysis_path"
+            else:
+                query_name = _path_name(query)
+                basename_matches = [
+                    item
+                    for item in ranked
+                    if query_name
+                    and (
+                        _path_name(item.source_path) == query_name
+                        or _path_name(item.analysis_path) == query_name
+                    )
+                ]
+                matches = basename_matches
+                match_strategy = "unique_basename" if len(matches) == 1 else "basename"
+
+        warnings: list[str] = []
+        if not query:
+            warnings.append("No database path was provided.")
+        if len(matches) > 1:
+            warnings.append(
+                f"{len(matches)} ranked candidates matched; provide a full source_path to disambiguate."
+            )
+        if not matches and query:
+            warnings.append("No ranked MDB candidate matched the provided path.")
+
+        selected = matches[0] if len(matches) == 1 else None
+        selected_tables: list[dict[str, Any]] = []
+        if selected:
+            for row in table_rows:
+                if _path_key(row.get("database_path")) != _path_key(
+                    selected.analysis_path
+                ):
+                    continue
+                selected_tables.append(
+                    {
+                        "database_path": row.get("database_path"),
+                        "table_name": row.get("table_name"),
+                        "row_count": _as_int(row.get("row_count")),
+                        "column_count": _as_int(row.get("column_count")),
+                        "primary_key_columns": row.get("primary_key_columns") or "",
+                        "index_count": _as_int(row.get("index_count")),
+                    }
+                )
+            selected_tables.sort(
+                key=lambda item: str(item.get("table_name") or "").lower()
+            )
+            if selected.has_schema_warning:
+                warnings.append("Selected candidate has an ODBC schema warning.")
+            if selected.table_count == 0:
+                warnings.append("Selected candidate has no extracted tables.")
+
+        schema_warning_count = len([item for item in ranked if item.has_schema_warning])
+        return {
+            "generated_at_utc": _now_utc(),
+            "read_only": True,
+            "source_artifact": {
+                "eras_discovery": str(self._export_path("ERAS_MDB_DISCOVERY.csv")),
+                "eras_tables": str(self._export_path("ERAS_MDB_TABLES.csv")),
+                "eras_schema": str(self._export_path("ERAS_MDB_SCHEMA.md")),
+            },
+            "warnings": warnings,
+            "counts": {
+                "candidate_count": len(ranked),
+                "match_count": len(matches),
+                "table_count": len(selected_tables),
+                "schema_warning_count": schema_warning_count,
+            },
+            "decision_status": "candidate_ranking_only",
+            "data_policy": "metadata_only_no_business_row_values",
+            "database_path": query,
+            "match_strategy": match_strategy,
+            "candidate": selected.to_dict() if selected else None,
+            "score_breakdown": selected.reasons if selected else [],
+            "tables": selected_tables,
+            "matches": [item.to_dict() for item in matches[:10]],
         }
 
     def powermap_status(self) -> dict[str, Any]:
@@ -527,6 +667,10 @@ def eras_list_tables(database_filter: str | None = None) -> dict[str, Any]:
 
 def eras_rank_databases(limit: int = 10, include_all: bool = False) -> dict[str, Any]:
     return _DEFAULT_FACADE.eras_rank_databases(limit=limit, include_all=include_all)
+
+
+def eras_explain_database(database_path: str) -> dict[str, Any]:
+    return _DEFAULT_FACADE.eras_explain_database(database_path=database_path)
 
 
 def powermap_status() -> dict[str, Any]:
