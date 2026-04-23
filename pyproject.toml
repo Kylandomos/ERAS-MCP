@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eras-opencities-mcp"
+version = "0.1.0"
+description = "Read-only local MCP facade for ERAS MDB and OpenCities/PowerMap inventory artifacts."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp==1.27.0",
+  "pyodbc==5.3.0",
+]
+
+[project.scripts]
+eras-mcp-readonly = "mcp_server.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["adapters*", "mcp_server*", "services*"]

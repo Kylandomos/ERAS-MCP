@@ -1,0 +1,33 @@
+# Python caches and local test/build output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Raw/generated project artifacts kept local by policy
+artifacts/work/**
+artifacts/inventories/**
+artifacts/logs/**
+artifacts/exports/**
+artifacts/snapshots/**
+
+# Access databases and other raw local data
+*.mdb
+*.accdb
+*.ldb
+*.laccdb
+
+# Local/editor noise
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
