@@ -121,9 +121,19 @@ If the Python user scripts directory is not on `PATH`, use:
 ```powershell
 python -m mcp_server env-status
 python -m mcp_server build-gap-report
+python -m mcp_server eras-rank-databases --limit 10
 ```
 
 The CLI and MCP facade read existing artifacts by default. They do not rerun scans, write MDB files, or execute Bentley/OpenCities commands.
+
+## ERAS MDB Candidate Ranking
+
+- `eras-rank-databases` ranks MDB candidates using metadata only.
+- The ranking is a review aid, not an authoritative database declaration.
+- Curated outputs:
+  - `docs/reports/eras_mdb_authoritative_candidates_20260423.md`
+  - `docs/schemas/ERAS_MDB_CANDIDATE_SCORECARD.csv`
+  - `docs/evidence/ev-009-eras-authoritative-candidates.md`
 
 ## Next Links
 
@@ -132,6 +142,7 @@ The CLI and MCP facade read existing artifacts by default. They do not rerun sca
 - Evidence map: `EVIDENCE_INDEX.md`
 - MVP baseline: `docs/reports/mvp_readonly_baseline_20260423.md`
 - Current gaps: `docs/reports/mvp_gap_report_20260423.md`
+- ERAS MDB ranking: `docs/reports/eras_mdb_authoritative_candidates_20260423.md`
 
 ## Read-Only MCP Facade Notes (Worker E)
 

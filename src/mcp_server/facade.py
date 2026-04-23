@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from adapters.powermap import PowerMapArtifactAdapter
-from services import ArtifactStore, SearchBounds, find_artifacts_safe
+from services import (
+    ArtifactStore,
+    SearchBounds,
+    find_artifacts_safe,
+    rank_mdb_candidates,
+)
 
 DEFAULT_PATTERNS = [
     "*.mdb",
@@ -88,6 +93,15 @@ class MCPFacade:
             )
         except OSError:
             return 0
+
+    def _schema_text(self) -> str:
+        schema_path = self._export_path("ERAS_MDB_SCHEMA.md")
+        if not schema_path.is_file():
+            return ""
+        try:
+            return schema_path.read_text(encoding="utf-8-sig")
+        except OSError:
+            return ""
 
     def _powermap_warnings(self, inventory: dict[str, Any] | None) -> list[str]:
         powermap = PowerMapArtifactAdapter(inventory).powermap
@@ -321,6 +335,53 @@ class MCPFacade:
             "tables": tables,
         }
 
+    def eras_rank_databases(
+        self, limit: int = 10, include_all: bool = False
+    ) -> dict[str, Any]:
+        safe_limit = max(1, min(int(limit or 10), 100))
+        discovery_rows = self.store.read_export_csv("ERAS_MDB_DISCOVERY.csv")
+        table_rows = self.store.read_export_csv("ERAS_MDB_TABLES.csv")
+        schema_text = self._schema_text()
+        ranked = rank_mdb_candidates(
+            discovery_rows=discovery_rows,
+            table_rows=table_rows,
+            schema_text=schema_text,
+        )
+        selected = ranked if include_all else ranked[:safe_limit]
+        warning_count = len([item for item in ranked if item.has_schema_warning])
+        incomplete_count = len([item for item in ranked if item.table_count == 0])
+
+        warnings: list[str] = []
+        if warning_count:
+            warnings.append(
+                f"{warning_count} ranked MDB candidates have ODBC schema warnings."
+            )
+        if incomplete_count:
+            warnings.append(
+                f"{incomplete_count} ranked MDB candidates have no extracted tables."
+            )
+
+        return {
+            "generated_at_utc": _now_utc(),
+            "read_only": True,
+            "source_artifact": {
+                "eras_discovery": str(self._export_path("ERAS_MDB_DISCOVERY.csv")),
+                "eras_tables": str(self._export_path("ERAS_MDB_TABLES.csv")),
+                "eras_schema": str(self._export_path("ERAS_MDB_SCHEMA.md")),
+            },
+            "warnings": warnings,
+            "counts": {
+                "candidate_count": len(ranked),
+                "returned_count": len(selected),
+                "schema_warning_count": warning_count,
+                "incomplete_schema_count": incomplete_count,
+            },
+            "decision_status": "candidate_ranking_only",
+            "limit": safe_limit,
+            "include_all": include_all,
+            "candidates": [item.to_dict() for item in selected],
+        }
+
     def powermap_status(self) -> dict[str, Any]:
         inventory = self._latest_inventory()
         inventory_path = self.store.latest_inventory_path()
@@ -390,6 +451,16 @@ class MCPFacade:
                 }
             )
 
+        schema_warning_count = self._schema_warning_count()
+        if schema_warning_count:
+            gaps.append(
+                {
+                    "area": "eras_mdb",
+                    "gap": f"{schema_warning_count} MDB schema analyses reported UTF-16 ODBC decode warnings.",
+                    "suggested_action": "Classify warning cases and use candidate ranking as review guidance, not a final authoritative decision.",
+                }
+            )
+
         if powermap_inventory:
             for gap in powermap_inventory.get("gaps_and_fallbacks", []) or []:
                 if not isinstance(gap, dict):
@@ -452,6 +523,10 @@ def eras_list_databases() -> dict[str, Any]:
 
 def eras_list_tables(database_filter: str | None = None) -> dict[str, Any]:
     return _DEFAULT_FACADE.eras_list_tables(database_filter=database_filter)
+
+
+def eras_rank_databases(limit: int = 10, include_all: bool = False) -> dict[str, Any]:
+    return _DEFAULT_FACADE.eras_rank_databases(limit=limit, include_all=include_all)
 
 
 def powermap_status() -> dict[str, Any]:

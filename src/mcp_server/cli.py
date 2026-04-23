@@ -56,6 +56,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Case-insensitive substring filter on database path.",
     )
+    eras_rank_parser = subparsers.add_parser(
+        "eras-rank-databases",
+        help="Rank ERAS MDB candidates using metadata-only scoring.",
+    )
+    eras_rank_parser.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum ranked candidates to return when --all is not set.",
+    )
+    eras_rank_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Return every ranked candidate.",
+    )
     subparsers.add_parser("powermap-status", help="Summarize PowerMap inventory status.")
     subparsers.add_parser(
         "powermap-list-workspaces", help="List PowerMap workspace path candidates."
@@ -88,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "eras-list-tables":
         _dump_json(facade.eras_list_tables(database_filter=args.database_filter))
+        return 0
+    if args.command == "eras-rank-databases":
+        _dump_json(facade.eras_rank_databases(limit=args.limit, include_all=args.all))
         return 0
     if args.command == "powermap-status":
         _dump_json(facade.powermap_status())

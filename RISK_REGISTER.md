@@ -7,6 +7,7 @@ Last updated: 2026-04-23
 - Safety constraints require read-only behavior by default.
 - The project starts with incomplete knowledge of the target workstation.
 - Current MVP baseline has partial MDB extraction and one active PowerMap gap.
+- Current MDB ranking is candidate-only and must not be treated as an authoritative decision.
 
 ## Hypotheses
 
@@ -36,6 +37,8 @@ Last updated: 2026-04-23
 | R-008 | Medium | MDB schema extraction is incomplete | ODBC UTF-16 warnings remain on 32 analyses | Treat as P1 triage, not MVP blocker; document partial extraction limits | Warning cases classified or remediated | `EVIDENCE_INDEX.md#ev-003` |
 | R-009 | Medium | Python Manager capability is missed | Read-only scan does not find Python Manager | Manual check of launcher/install media and additional roots | Presence/absence confirmed with evidence | `EVIDENCE_INDEX.md#ev-002` |
 | R-010 | Medium | MCP output contract drift | Tool responses omit envelope metadata | Tests assert `read_only`, `source_artifact`, `generated_at_utc`, `warnings`, and `counts` | Unit tests pass | `EVIDENCE_INDEX.md#ev-008` |
+| R-011 | Medium | Candidate score is mistaken for authoritative selection | Downstream code treats rank 1 as final truth | Add `decision_status=candidate_ranking_only` and keep validation backlog item open | Reports and API clearly label candidate-only status | `EVIDENCE_INDEX.md#ev-009` |
+| R-012 | Medium | Metadata-only ranking misses business semantics | High score comes from path/table metadata but not actual workflow usage | Require human validation before semantic modeling or cross-domain checks | Top candidates reviewed with stakeholder/process evidence | `EVIDENCE_INDEX.md#ev-009` |
 
 ## Review Cadence
 

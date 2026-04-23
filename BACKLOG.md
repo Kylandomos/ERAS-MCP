@@ -9,6 +9,7 @@ Last updated: 2026-04-23
 - Cycle 1 delivered a read-only scanner, partial MDB schema extraction, and an artifact-backed MCP facade.
 - Current MDB evidence: `54` candidates, `54/54` hash matches, `183` table rows across `20` databases, `32` ODBC warnings.
 - Current PowerMap evidence: Python Manager was not found by read-only scan.
+- Current MDB ranking evidence: `CLIENT\client.mdb` is top-ranked by metadata-only score, but not declared authoritative.
 
 ## Hypotheses
 
@@ -42,6 +43,8 @@ Last updated: 2026-04-23
 | BL-011 | P1 | MDB warning triage | 32 UTF-16 ODBC warning cases are classified by file/path and mitigation path | `EVIDENCE_INDEX.md#ev-003` |
 | BL-012 | P1 | PowerMap Python Manager follow-up | Python Manager absence is manually confirmed or alternate install/config path is documented | `EVIDENCE_INDEX.md#ev-002` |
 | BL-013 | P1 | Authoritative MDB selection | Candidate MDB priority rule or stakeholder decision identifies the ERAS MDB(s) to use for semantic modeling | `EVIDENCE_INDEX.md#ev-003` |
+| BL-014 | P0 | MDB candidate ranking | Metadata-only scorecard and MCP/CLI ranking endpoint rank all 54 candidates without reading row values | `EVIDENCE_INDEX.md#ev-009` |
+| BL-015 | P1 | Validate top-ranked MDB candidates | Human review confirms whether `CLIENT\client.mdb` is operationally meaningful or only reference/configuration data | `EVIDENCE_INDEX.md#ev-009` |
 
 ## Exit Criteria for Backlog v0.1
 

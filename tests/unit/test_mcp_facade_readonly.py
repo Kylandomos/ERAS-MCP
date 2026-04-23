@@ -207,6 +207,50 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
             self.assertIn("warnings", gaps)
             self.assertEqual(gaps["counts"]["gap_count"], gaps["gap_count"])
 
+    def test_eras_rank_databases_uses_standard_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            exports = repo / "artifacts" / "exports"
+            exports.mkdir(parents=True, exist_ok=True)
+            (exports / "ERAS_MDB_DISCOVERY.csv").write_text(
+                "\n".join(
+                    [
+                        "source_path,extension,file_size_bytes,modified_utc,source_sha256,analysis_path,analysis_sha256,hash_match",
+                        r"C:\App\CLIENT\a.mdb,.mdb,100,2026-04-20T00:00:00+00:00,sha1,C:\work\a.mdb,sha1,True",
+                        r"C:\App\SYSTEME\b_.mdb,.mdb,200,2026-04-19T00:00:00+00:00,sha2,C:\work\b_.mdb,sha2,True",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_TABLES.csv").write_text(
+                "\n".join(
+                    [
+                        "database_path,table_name,row_count,column_count,primary_key_columns,index_count",
+                        r"C:\work\a.mdb,T1,1000,2,,0",
+                        r"C:\work\a.mdb,T2,1,2,,0",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (exports / "ERAS_MDB_SCHEMA.md").write_text(
+                "\n".join(
+                    [
+                        r"## Database: `C:\work\b_.mdb`",
+                        "- ODBC schema read failed: example",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            facade = MCPFacade(repo_root=repo)
+            result = facade.eras_rank_databases(limit=1)
+
+            self.assertTrue(result["read_only"])
+            self.assertEqual(result["decision_status"], "candidate_ranking_only")
+            self.assertEqual(result["counts"]["candidate_count"], 2)
+            self.assertEqual(result["counts"]["returned_count"], 1)
+            self.assertEqual(result["candidates"][0]["source_path"], r"C:\App\CLIENT\a.mdb")
+
 
 if __name__ == "__main__":
     unittest.main()

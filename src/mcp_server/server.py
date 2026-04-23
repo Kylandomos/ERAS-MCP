@@ -46,6 +46,15 @@ def create_mcp_stdio_server(
         return active_facade.eras_list_tables(database_filter=database_filter)
 
     @server.tool()
+    def eras_rank_databases(
+        limit: int = 10, include_all: bool = False
+    ) -> dict[str, Any]:
+        return active_facade.eras_rank_databases(
+            limit=limit,
+            include_all=include_all,
+        )
+
+    @server.tool()
     def powermap_status() -> dict[str, Any]:
         return active_facade.powermap_status()
 

@@ -9,6 +9,7 @@ Last updated: 2026-04-23
 - `EV-001` confirms both provided roots exist as FileSystem directories (`Exists=True` via `Test-Path` and `Get-Item`).
 - Curated MVP evidence reports now exist under `docs/reports/` and `docs/schemas/`.
 - Raw/generated artifacts remain local-only by Git ignore policy.
+- ERAS MDB candidate ranking is tracked as candidate-only evidence, not an authoritative decision.
 
 ## Hypotheses
 
@@ -43,6 +44,7 @@ Last updated: 2026-04-23
 | EV-006 | Risk register reflects active threats and mitigations | `docs/evidence/ev-006-risk-review.md` | validated | Current cycle |
 | EV-007 | Evidence indexing process is consistently applied | `docs/evidence/ev-007-evidence-process-audit.md` | validated | Current cycle |
 | EV-008 | Read-only MCP facade exposes artifact-backed inspection tools | `docs/evidence/ev-008-mcp-facade.md` | validated | Current cycle |
+| EV-009 | ERAS MDB authoritative candidates are ranked from metadata-only evidence | `docs/evidence/ev-009-eras-authoritative-candidates.md` | validated-candidate-ranking | Current cycle |
 
 ## Latest Evidence Note
 
@@ -59,6 +61,10 @@ Last updated: 2026-04-23
   - Unit tests: `13` passing
   - MCP stdio server factory initializes with `mcp==1.27.0`
   - CLI output envelope includes `read_only`, `source_artifact`, `generated_at_utc`, `warnings`, and `counts`
+- `EV-009`:
+  - Candidates ranked: `54`
+  - Top-ranked candidate: `C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb`
+  - Decision status: `candidate_ranking_only`
 
 ## Acceptance Criteria (v0.1)
 

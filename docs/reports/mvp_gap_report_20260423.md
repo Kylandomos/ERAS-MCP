@@ -4,8 +4,8 @@ Generated: 2026-04-23
 
 ## Facts Proved
 
-- The read-only MCP facade reports one active gap from current artifacts.
-- The gap is artifact-derived from the latest PowerMap inventory.
+- The read-only MCP facade reports two active gaps from current artifacts.
+- The gaps are artifact-derived from the latest PowerMap inventory and ERAS MDB schema exports.
 
 ## Active Gaps
 
@@ -18,4 +18,3 @@ Generated: 2026-04-23
 
 - The MVP read-only baseline is not blocked by these gaps because core inventory, MDB discovery, partial schema extraction, and MCP artifact tools are functional.
 - No write operation or active Bentley/OpenCities automation is introduced to work around these gaps.
-
