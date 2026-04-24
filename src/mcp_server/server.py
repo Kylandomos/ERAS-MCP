@@ -63,6 +63,24 @@ def create_mcp_stdio_server(
         return active_facade.eras_review_status()
 
     @server.tool()
+    def eras_set_review_decision(
+        source_path: str,
+        status: str,
+        reviewer: str = "",
+        decision_basis: str = "",
+        notes: str = "",
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        return active_facade.eras_set_review_decision(
+            source_path=source_path,
+            status=status,
+            reviewer=reviewer,
+            decision_basis=decision_basis,
+            notes=notes,
+            dry_run=dry_run,
+        )
+
+    @server.tool()
     def powermap_status() -> dict[str, Any]:
         return active_facade.powermap_status()
 

@@ -10,6 +10,7 @@ Last updated: 2026-04-24
 - Current MDB ranking is candidate-only and must not be treated as an authoritative decision.
 - Current human review pack keeps all MDB decisions in `candidate_ranking_only` state until reviewer input is recorded.
 - Current decision workflow requires reviewer, UTC date, and decision basis before any accepted review is considered ready.
+- Current decision intake writes only versioned review artifacts and leaves MDB files untouched.
 
 ## Hypotheses
 
@@ -44,6 +45,7 @@ Last updated: 2026-04-24
 | R-013 | Medium | Human review pack becomes stale | New scans or exports are generated after the review pack date | Regenerate review pack from current scorecard before using decisions | Review pack date and source artifacts match current cycle | `EVIDENCE_INDEX.md#ev-010` |
 | R-014 | Medium | Ambiguous MDB counts create false exclusions | Unique analysis path/key counts are mistaken for total candidates | Expose `eras_candidate_count`, `eras_unique_analysis_path_count`, and `eras_unique_analysis_key_count`; retain 54 source candidate rows in review docs | CLI/API and docs show all counts explicitly | `EVIDENCE_INDEX.md#ev-010` |
 | R-015 | Medium | Human decision file contains incomplete acceptances | A row is changed to `accept_review` without reviewer, date, or basis | `eras-review-status` warns and keeps global state out of `human_review_ready` | Incomplete accepted rows are rejected by validation counts | `EVIDENCE_INDEX.md#ev-011` |
+| R-016 | Medium | Decision intake accidentally records the wrong candidate | Reviewer supplies an incorrect but valid `source_path` | Support `--dry-run`, echo previous/updated rows, and keep write scope limited to review artifacts | Dry-run can preview the exact row before write | `EVIDENCE_INDEX.md#ev-012` |
 
 ## Review Cadence
 

@@ -414,6 +414,163 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
             self.assertEqual(result["counts"]["incomplete_accept_review_count"], 1)
             self.assertIn("accept_review", result["warnings"][0])
 
+    def test_eras_review_status_reports_duplicate_source_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            (reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv").write_text(
+                "\n".join(
+                    [
+                        "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes",
+                        r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                        r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_review_status()
+
+            self.assertEqual(result["counts"]["duplicate_source_path_count"], 1)
+            self.assertTrue(
+                any("Duplicate decision source_path" in warning for warning in result["warnings"])
+            )
+
+    def test_eras_set_review_decision_dry_run_does_not_modify_csv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            decisions_path = reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv"
+            decisions_path.write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                encoding="utf-8",
+            )
+            before = decisions_path.read_text(encoding="utf-8")
+
+            result = MCPFacade(repo_root=repo).eras_set_review_decision(
+                source_path=r"C:\App\CLIENT\a.mdb",
+                status="accept_review",
+                reviewer="analyst",
+                decision_basis="manual review",
+                notes="ready",
+                dry_run=True,
+            )
+
+            self.assertTrue(result["success"])
+            self.assertTrue(result["dry_run"])
+            self.assertTrue(result["read_only"])
+            self.assertEqual(decisions_path.read_text(encoding="utf-8"), before)
+            self.assertEqual(result["decision_status"], "human_review_ready")
+
+    def test_eras_set_review_decision_rejects_incomplete_accept(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            (reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_set_review_decision(
+                source_path=r"C:\App\CLIENT\a.mdb",
+                status="accept_review",
+                reviewer="analyst",
+            )
+
+            self.assertFalse(result["success"])
+            self.assertFalse(result["changed"])
+            self.assertIn("decision_basis", result["warnings"][0])
+
+    def test_eras_set_review_decision_writes_valid_accept_and_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            decisions_path = reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv"
+            decisions_path.write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_set_review_decision(
+                source_path=r"C:\App\CLIENT\a.mdb",
+                status="accept_review",
+                reviewer="analyst",
+                decision_basis="manual review",
+                notes="ready",
+            )
+
+            self.assertTrue(result["success"])
+            self.assertFalse(result["read_only"])
+            self.assertEqual(result["decision_status"], "human_review_ready")
+            self.assertEqual(result["updated_row"]["review_status"], "accept_review")
+            self.assertIn("analyst", decisions_path.read_text(encoding="utf-8"))
+            report_path = repo / "docs" / "reports" / "eras_mdb_human_decision_status_20260424.md"
+            self.assertTrue(report_path.is_file())
+            self.assertIn("human_review_ready", report_path.read_text(encoding="utf-8"))
+
+    def test_eras_set_review_decision_refuses_unknown_source_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            (reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_set_review_decision(
+                source_path=r"C:\App\CLIENT\missing.mdb",
+                status="reject_review",
+                reviewer="analyst",
+                decision_basis="not found",
+            )
+
+            self.assertFalse(result["success"])
+            self.assertIn("expected exactly 1", result["warnings"][0])
+
     def test_cli_eras_explain_database_dispatches_to_facade(self) -> None:
         class FakeFacade:
             def eras_explain_database(self, database_path: str) -> dict[str, object]:
@@ -467,6 +624,60 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["decision_status"], "human_review_pending")
+
+    def test_cli_eras_set_review_decision_dispatches_to_facade(self) -> None:
+        class FakeFacade:
+            def eras_set_review_decision(
+                self,
+                *,
+                source_path: str,
+                status: str,
+                reviewer: str = "",
+                decision_basis: str = "",
+                notes: str = "",
+                dry_run: bool = False,
+            ) -> dict[str, object]:
+                return {
+                    "generated_at_utc": "2026-04-24T00:00:00+00:00",
+                    "read_only": dry_run,
+                    "source_artifact": {},
+                    "warnings": [],
+                    "counts": {},
+                    "decision_status": "human_review_ready",
+                    "success": True,
+                    "source_path": source_path,
+                    "status": status,
+                    "reviewer": reviewer,
+                    "decision_basis": decision_basis,
+                    "notes": notes,
+                }
+
+        original_facade = cli_module.MCPFacade
+        cli_module.MCPFacade = FakeFacade  # type: ignore[assignment]
+        try:
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = cli_module.main(
+                    [
+                        "eras-set-review-decision",
+                        "--source-path",
+                        r"C:\App\CLIENT\a.mdb",
+                        "--status",
+                        "accept_review",
+                        "--reviewer",
+                        "analyst",
+                        "--decision-basis",
+                        "manual review",
+                        "--dry-run",
+                    ]
+                )
+        finally:
+            cli_module.MCPFacade = original_facade
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "accept_review")
+        self.assertTrue(payload["read_only"])
 
 
 if __name__ == "__main__":

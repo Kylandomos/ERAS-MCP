@@ -15,6 +15,7 @@ Generated: 2026-04-24
 - Scorecard: `docs/schemas/ERAS_MDB_CANDIDATE_SCORECARD.csv`
 - Review pack: `docs/reports/eras_mdb_candidate_review_20260423.md`
 - Evidence: `docs/evidence/ev-011-eras-mdb-human-decisions.md`
+- Decision intake evidence: `docs/evidence/ev-012-eras-mdb-decision-intake.md`
 
 ## Summary
 
@@ -61,3 +62,9 @@ An `accept_review` decision is not considered ready unless it includes:
 - `decision_basis`
 
 The validation tool reports missing fields as warnings and keeps the global status out of `human_review_ready`.
+
+## Regeneration
+
+- Dry-run preview: `eras-mcp-readonly eras-set-review-decision --source-path "<source_path>" --status accept_review --reviewer "<reviewer>" --decision-basis "<basis>" --dry-run`
+- Write mode updates only the decision CSV and this status report.
+- Even when `human_review_ready` is reached, automation does not declare an authoritative MDB.

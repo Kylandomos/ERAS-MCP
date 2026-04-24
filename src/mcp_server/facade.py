@@ -8,9 +8,12 @@ from typing import Any, Iterable
 from adapters.powermap import PowerMapArtifactAdapter
 from services import (
     ArtifactStore,
+    DECISION_REQUIRED_COLUMNS,
     SearchBounds,
+    apply_mdb_human_decision,
     find_artifacts_safe,
     rank_mdb_candidates,
+    render_human_decision_status_report,
     validate_mdb_human_decisions,
 )
 
@@ -105,6 +108,18 @@ class MCPFacade:
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             return [dict(row) for row in reader], list(reader.fieldnames or [])
+
+    def _write_csv_rows(
+        self,
+        path: Path,
+        rows: list[dict[str, str]],
+        fieldnames: list[str],
+    ) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
     def _schema_warning_count(self) -> int:
         schema_path = self._export_path("ERAS_MDB_SCHEMA.md")
@@ -577,6 +592,91 @@ class MCPFacade:
             "pending_review_sample": validation.pending_reviews[:10],
         }
 
+    def eras_set_review_decision(
+        self,
+        *,
+        source_path: str,
+        status: str,
+        reviewer: str = "",
+        decision_basis: str = "",
+        notes: str = "",
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        generated_at_utc = _now_utc()
+        reviewed_at_utc = (
+            generated_at_utc
+            if status in {"accept_review", "reject_review"}
+            or reviewer.strip()
+            or decision_basis.strip()
+            else ""
+        )
+        scorecard_path = self._docs_path(
+            "schemas", "ERAS_MDB_CANDIDATE_SCORECARD.csv"
+        )
+        decisions_path = self._docs_path(
+            "reviews", "ERAS_MDB_HUMAN_DECISIONS_20260424.csv"
+        )
+        report_path = self._docs_path(
+            "reports", "eras_mdb_human_decision_status_20260424.md"
+        )
+        scorecard_rows, _ = self._read_csv_with_columns(scorecard_path)
+        decision_rows, decision_columns = self._read_csv_with_columns(decisions_path)
+        update = apply_mdb_human_decision(
+            scorecard_rows=scorecard_rows,
+            decision_rows=decision_rows,
+            decision_columns=decision_columns,
+            source_path=source_path,
+            status=status,
+            reviewer=reviewer,
+            decision_basis=decision_basis,
+            notes=notes,
+            reviewed_at_utc=reviewed_at_utc,
+            dry_run=dry_run,
+        )
+
+        written_files: list[str] = []
+        if update.success and not dry_run:
+            self._write_csv_rows(
+                decisions_path,
+                update.decisions,
+                DECISION_REQUIRED_COLUMNS,
+            )
+            validation = validate_mdb_human_decisions(
+                scorecard_rows=scorecard_rows,
+                decision_rows=update.decisions,
+                decision_columns=DECISION_REQUIRED_COLUMNS,
+            )
+            report_text = render_human_decision_status_report(
+                validation=validation,
+                generated_date=generated_at_utc.split("T", 1)[0],
+            )
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(report_text, encoding="utf-8")
+            written_files.extend([str(decisions_path), str(report_path)])
+
+        return {
+            "generated_at_utc": generated_at_utc,
+            "read_only": bool(dry_run),
+            "mdb_read_only": True,
+            "writes_mdb": False,
+            "source_artifact": {
+                "scorecard": str(scorecard_path),
+                "human_decisions": str(decisions_path),
+                "status_report": str(report_path),
+            },
+            "warnings": update.warnings,
+            "counts": update.counts,
+            "decision_status": update.decision_status,
+            "success": update.success,
+            "changed": update.changed,
+            "dry_run": dry_run,
+            "message": update.message,
+            "write_scope": [str(decisions_path), str(report_path)],
+            "written_files": written_files,
+            "previous_row": update.previous_row,
+            "updated_row": update.updated_row,
+        }
+
     def powermap_status(self) -> dict[str, Any]:
         inventory = self._latest_inventory()
         inventory_path = self.store.latest_inventory_path()
@@ -730,6 +830,25 @@ def eras_explain_database(database_path: str) -> dict[str, Any]:
 
 def eras_review_status() -> dict[str, Any]:
     return _DEFAULT_FACADE.eras_review_status()
+
+
+def eras_set_review_decision(
+    *,
+    source_path: str,
+    status: str,
+    reviewer: str = "",
+    decision_basis: str = "",
+    notes: str = "",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    return _DEFAULT_FACADE.eras_set_review_decision(
+        source_path=source_path,
+        status=status,
+        reviewer=reviewer,
+        decision_basis=decision_basis,
+        notes=notes,
+        dry_run=dry_run,
+    )
 
 
 def powermap_status() -> dict[str, Any]:

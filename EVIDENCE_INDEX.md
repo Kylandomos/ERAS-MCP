@@ -12,6 +12,7 @@ Last updated: 2026-04-24
 - ERAS MDB candidate ranking is tracked as candidate-only evidence, not an authoritative decision.
 - ERAS MDB human review and ODBC warning triage are tracked without promoting rank `1` to an authoritative decision.
 - ERAS MDB human decisions are initialized in a versioned CSV and validated by a read-only MCP/CLI tool.
+- ERAS MDB decision intake can preview or write review decisions while keeping MDB files untouched.
 
 ## Hypotheses
 
@@ -49,6 +50,7 @@ Last updated: 2026-04-24
 | EV-009 | ERAS MDB authoritative candidates are ranked from metadata-only evidence | `docs/evidence/ev-009-eras-authoritative-candidates.md` | validated-candidate-ranking | Current cycle |
 | EV-010 | ERAS MDB candidate ranking is packaged for human review and ODBC warning triage | `docs/evidence/ev-010-eras-mdb-human-review-pack.md` | validated-review-pack | Current cycle |
 | EV-011 | ERAS MDB human decision artifact is initialized and validated | `docs/evidence/ev-011-eras-mdb-human-decisions.md` | validated-decision-artifact-initialized | Current cycle |
+| EV-012 | ERAS MDB human decision intake can validate and record review decisions | `docs/evidence/ev-012-eras-mdb-decision-intake.md` | validated-decision-intake | Current cycle |
 
 ## Latest Evidence Note
 
@@ -62,7 +64,7 @@ Last updated: 2026-04-24
   - Databases with extracted tables: `20`
   - ODBC warning cases: `32`
 - `EV-008`:
-  - Unit tests: `31` passing
+  - Unit tests: `39` passing
   - MCP stdio server factory initializes with `mcp==1.27.0`
   - CLI output envelope includes `read_only`, `source_artifact`, `generated_at_utc`, `warnings`, and `counts`
 - `EV-009`:
@@ -83,6 +85,11 @@ Last updated: 2026-04-24
   - Default status: `needs_followup`
   - Validation CLI/API: `eras-review-status`
   - Current global status: `human_review_pending`
+- `EV-012`:
+  - Decision intake CLI/API: `eras-set-review-decision`
+  - Dry-run preview: available through `--dry-run`
+  - Write scope: decision CSV and decision status report only
+  - Current global status remains: `human_review_pending`
 
 ## Acceptance Criteria (v0.1)
 

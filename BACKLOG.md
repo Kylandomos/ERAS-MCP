@@ -12,6 +12,7 @@ Last updated: 2026-04-24
 - Current MDB ranking evidence: `CLIENT\client.mdb` is top-ranked by metadata-only score, but not declared authoritative.
 - Current MDB review evidence: `54` candidate rows are retained for human review, with `52` unique analysis path strings and `51` normalized analysis keys.
 - Current MDB decision evidence: `54` human decision rows are initialized as `needs_followup`; no authoritative MDB is declared.
+- Current MDB decision intake evidence: `eras-set-review-decision` can preview and validate a complete human decision with `--dry-run`.
 
 ## Hypotheses
 
@@ -51,6 +52,7 @@ Last updated: 2026-04-24
 | BL-017 | P1 | Initialize human decision artifact | Versioned decision CSV exists for all 54 candidates and validates through `eras-review-status` | `EVIDENCE_INDEX.md#ev-011` |
 | BL-018 | P1 | Alternate extraction decision for warning candidates | Human triage decides whether P1-A/P1-B UTF-16 warning cases justify alternate Access/ODBC extraction work | `EVIDENCE_INDEX.md#ev-010` |
 | BL-019 | P1 | Record final human review decisions | Top candidates receive complete `accept_review` or `reject_review` entries with reviewer, UTC date, and decision basis before semantic modeling | `EVIDENCE_INDEX.md#ev-011` |
+| BL-020 | P1 | Decision intake CLI/MCP | `eras-set-review-decision` supports dry-run, scoped CSV/report writes, and rejects incomplete or unknown decisions | `EVIDENCE_INDEX.md#ev-012` |
 
 ## Exit Criteria for Backlog v0.1
 

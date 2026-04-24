@@ -84,6 +84,41 @@ def build_parser() -> argparse.ArgumentParser:
         "eras-review-status",
         help="Validate ERAS MDB human review decisions.",
     )
+    set_review_parser = subparsers.add_parser(
+        "eras-set-review-decision",
+        help="Set one ERAS MDB human review decision in the versioned CSV.",
+    )
+    set_review_parser.add_argument(
+        "--source-path",
+        required=True,
+        help="Exact source_path from the human decision CSV.",
+    )
+    set_review_parser.add_argument(
+        "--status",
+        required=True,
+        choices=["needs_followup", "accept_review", "reject_review"],
+        help="Human review status to set.",
+    )
+    set_review_parser.add_argument(
+        "--reviewer",
+        default="",
+        help="Reviewer identity. Required for accept_review and reject_review.",
+    )
+    set_review_parser.add_argument(
+        "--decision-basis",
+        default="",
+        help="Human decision basis. Required for accept_review and reject_review.",
+    )
+    set_review_parser.add_argument(
+        "--notes",
+        default="",
+        help="Optional reviewer notes.",
+    )
+    set_review_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and show the planned change without writing files.",
+    )
     subparsers.add_parser("powermap-status", help="Summarize PowerMap inventory status.")
     subparsers.add_parser(
         "powermap-list-workspaces", help="List PowerMap workspace path candidates."
@@ -126,6 +161,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "eras-review-status":
         _dump_json(facade.eras_review_status())
         return 0
+    if args.command == "eras-set-review-decision":
+        result = facade.eras_set_review_decision(
+            source_path=args.source_path,
+            status=args.status,
+            reviewer=args.reviewer,
+            decision_basis=args.decision_basis,
+            notes=args.notes,
+            dry_run=args.dry_run,
+        )
+        _dump_json(result)
+        return 0 if result.get("success") else 1
     if args.command == "powermap-status":
         _dump_json(facade.powermap_status())
         return 0

@@ -12,6 +12,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from services.eras_mdb_review import (
     DECISION_REQUIRED_COLUMNS,
+    apply_mdb_human_decision,
     initialize_decision_row,
     validate_mdb_human_decisions,
 )
@@ -104,6 +105,62 @@ class TestErasMdbReview(unittest.TestCase):
 
         self.assertEqual(result.decision_status, "human_review_ready")
         self.assertEqual(result.counts["ready_accept_review_count"], 1)
+
+    def test_apply_accept_review_requires_complete_human_fields(self) -> None:
+        scorecard = [{"source_path": r"C:\App\CLIENT\a.mdb"}]
+        decisions = [
+            {
+                "source_path": r"C:\App\CLIENT\a.mdb",
+                "review_status": "needs_followup",
+            }
+        ]
+
+        result = apply_mdb_human_decision(
+            scorecard_rows=scorecard,
+            decision_rows=decisions,
+            decision_columns=DECISION_REQUIRED_COLUMNS,
+            source_path=r"C:\App\CLIENT\a.mdb",
+            status="accept_review",
+            reviewer="analyst",
+            decision_basis="",
+            reviewed_at_utc="2026-04-24T10:00:00+00:00",
+        )
+
+        self.assertFalse(result.success)
+        self.assertFalse(result.changed)
+        self.assertIn("decision_basis", result.warnings[0])
+
+    def test_apply_reject_review_updates_row_with_human_fields(self) -> None:
+        scorecard = [{"source_path": r"C:\App\CLIENT\a.mdb"}]
+        decisions = [
+            {
+                "source_path": r"C:\App\CLIENT\a.mdb",
+                "review_status": "needs_followup",
+                "reviewer": "",
+                "reviewed_at_utc": "",
+                "decision_basis": "",
+                "notes": "",
+            }
+        ]
+
+        result = apply_mdb_human_decision(
+            scorecard_rows=scorecard,
+            decision_rows=decisions,
+            decision_columns=DECISION_REQUIRED_COLUMNS,
+            source_path=r"C:\App\CLIENT\a.mdb",
+            status="reject_review",
+            reviewer="analyst",
+            decision_basis="manual rejection",
+            notes="not operational",
+            reviewed_at_utc="2026-04-24T10:00:00+00:00",
+        )
+
+        self.assertTrue(result.success)
+        self.assertTrue(result.changed)
+        self.assertEqual(result.decision_status, "human_review_in_progress")
+        self.assertEqual(result.updated_row["review_status"], "reject_review")
+        self.assertEqual(result.updated_row["reviewer"], "analyst")
+        self.assertEqual(result.updated_row["reviewed_at_utc"], "2026-04-24T10:00:00+00:00")
 
     def test_path_mismatches_and_duplicates_are_reported(self) -> None:
         scorecard = [

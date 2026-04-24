@@ -128,6 +128,7 @@ python -m mcp_server build-gap-report
 python -m mcp_server eras-rank-databases --limit 10
 python -m mcp_server eras-explain-database --path "C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb"
 python -m mcp_server eras-review-status
+python -m mcp_server eras-set-review-decision --source-path "C:\AppSogelink\ERAS_Connect_2026\CLIENT\client.mdb" --status accept_review --reviewer analyst --decision-basis "manual review" --dry-run
 ```
 
 The CLI and MCP facade read existing artifacts by default. They do not rerun scans, write MDB files, or execute Bentley/OpenCities commands.
@@ -137,6 +138,7 @@ The CLI and MCP facade read existing artifacts by default. They do not rerun sca
 - `eras-rank-databases` ranks MDB candidates using metadata only.
 - `eras-explain-database` explains one candidate using score reasons and table metadata only.
 - `eras-review-status` validates the human decision artifact without reading MDB row values.
+- `eras-set-review-decision` updates only the versioned review CSV and regenerated status report; use `--dry-run` to preview without writing.
 - The ranking is a review aid, not an authoritative database declaration.
 - Curated outputs:
   - `docs/reports/eras_mdb_authoritative_candidates_20260423.md`
@@ -148,6 +150,7 @@ The CLI and MCP facade read existing artifacts by default. They do not rerun sca
   - `docs/evidence/ev-009-eras-authoritative-candidates.md`
   - `docs/evidence/ev-010-eras-mdb-human-review-pack.md`
   - `docs/evidence/ev-011-eras-mdb-human-decisions.md`
+  - `docs/evidence/ev-012-eras-mdb-decision-intake.md`
 
 ## Next Links
 

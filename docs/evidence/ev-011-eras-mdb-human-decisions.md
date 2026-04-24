@@ -38,3 +38,4 @@ The ERAS MDB candidate ranking now has a versioned human decision artifact and a
 - No authoritative MDB is declared by automation.
 - All current rows require human follow-up.
 - No business row values or data samples were read.
+- Decision intake behavior is tracked separately in `docs/evidence/ev-012-eras-mdb-decision-intake.md`.
