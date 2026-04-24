@@ -1,6 +1,6 @@
 # Risk Register v0.1
 
-Last updated: 2026-04-23
+Last updated: 2026-04-24
 
 ## Facts Proved
 
@@ -9,6 +9,7 @@ Last updated: 2026-04-23
 - Current MVP baseline has partial MDB extraction and one active PowerMap gap.
 - Current MDB ranking is candidate-only and must not be treated as an authoritative decision.
 - Current human review pack keeps all MDB decisions in `candidate_ranking_only` state until reviewer input is recorded.
+- Current decision workflow requires reviewer, UTC date, and decision basis before any accepted review is considered ready.
 
 ## Hypotheses
 
@@ -42,6 +43,7 @@ Last updated: 2026-04-23
 | R-012 | Medium | Metadata-only ranking misses business semantics | High score comes from path/table metadata but not actual workflow usage | Require human validation before semantic modeling or cross-domain checks | Top candidates reviewed with stakeholder/process evidence | `EVIDENCE_INDEX.md#ev-009` |
 | R-013 | Medium | Human review pack becomes stale | New scans or exports are generated after the review pack date | Regenerate review pack from current scorecard before using decisions | Review pack date and source artifacts match current cycle | `EVIDENCE_INDEX.md#ev-010` |
 | R-014 | Medium | Ambiguous MDB counts create false exclusions | Unique analysis path/key counts are mistaken for total candidates | Expose `eras_candidate_count`, `eras_unique_analysis_path_count`, and `eras_unique_analysis_key_count`; retain 54 source candidate rows in review docs | CLI/API and docs show all counts explicitly | `EVIDENCE_INDEX.md#ev-010` |
+| R-015 | Medium | Human decision file contains incomplete acceptances | A row is changed to `accept_review` without reviewer, date, or basis | `eras-review-status` warns and keeps global state out of `human_review_ready` | Incomplete accepted rows are rejected by validation counts | `EVIDENCE_INDEX.md#ev-011` |
 
 ## Review Cadence
 

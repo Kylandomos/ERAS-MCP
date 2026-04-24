@@ -355,6 +355,65 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
             self.assertEqual(result["counts"]["match_count"], 2)
             self.assertIn("disambiguate", result["warnings"][0])
 
+    def test_eras_review_status_uses_standard_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "\n".join(
+                    [
+                        "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count",
+                        r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv").write_text(
+                "\n".join(
+                    [
+                        "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes",
+                        r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,needs_followup,,,,",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_review_status()
+
+            self.assertTrue(result["read_only"])
+            self.assertEqual(result["decision_status"], "human_review_pending")
+            self.assertEqual(result["data_policy"], "metadata_only_no_business_row_values")
+            self.assertEqual(result["counts"]["decision_count"], 1)
+            self.assertEqual(result["counts"]["needs_followup_count"], 1)
+            self.assertEqual(result["warnings"], [])
+
+    def test_eras_review_status_warns_for_incomplete_accept(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            schemas = repo / "docs" / "schemas"
+            reviews = repo / "docs" / "reviews"
+            schemas.mkdir(parents=True, exist_ok=True)
+            reviews.mkdir(parents=True, exist_ok=True)
+            (schemas / "ERAS_MDB_CANDIDATE_SCORECARD.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100",
+                encoding="utf-8",
+            )
+            (reviews / "ERAS_MDB_HUMAN_DECISIONS_20260424.csv").write_text(
+                "rank,source_path,analysis_path,score,confidence,has_schema_warning,table_count,total_row_count,review_status,reviewer,reviewed_at_utc,decision_basis,notes\n"
+                r"1,C:\App\CLIENT\a.mdb,C:\work\a.mdb,10,high,False,6,100,accept_review,analyst,,,",
+                encoding="utf-8",
+            )
+
+            result = MCPFacade(repo_root=repo).eras_review_status()
+
+            self.assertEqual(result["decision_status"], "human_review_in_progress")
+            self.assertEqual(result["counts"]["incomplete_accept_review_count"], 1)
+            self.assertIn("accept_review", result["warnings"][0])
+
     def test_cli_eras_explain_database_dispatches_to_facade(self) -> None:
         class FakeFacade:
             def eras_explain_database(self, database_path: str) -> dict[str, object]:
@@ -383,6 +442,31 @@ class TestMcpFacadeReadOnly(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["database_path"], r"C:\App\CLIENT\a.mdb")
         self.assertEqual(payload["decision_status"], "candidate_ranking_only")
+
+    def test_cli_eras_review_status_dispatches_to_facade(self) -> None:
+        class FakeFacade:
+            def eras_review_status(self) -> dict[str, object]:
+                return {
+                    "generated_at_utc": "2026-04-24T00:00:00+00:00",
+                    "read_only": True,
+                    "source_artifact": {},
+                    "warnings": [],
+                    "counts": {"decision_count": 1},
+                    "decision_status": "human_review_pending",
+                }
+
+        original_facade = cli_module.MCPFacade
+        cli_module.MCPFacade = FakeFacade  # type: ignore[assignment]
+        try:
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = cli_module.main(["eras-review-status"])
+        finally:
+            cli_module.MCPFacade = original_facade
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["decision_status"], "human_review_pending")
 
 
 if __name__ == "__main__":

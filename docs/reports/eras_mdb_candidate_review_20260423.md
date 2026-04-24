@@ -16,6 +16,7 @@ Generated: 2026-04-23
 - Discovery artifact: local-only `artifacts/exports/ERAS_MDB_DISCOVERY.csv`
 - Table metadata artifact: local-only `artifacts/exports/ERAS_MDB_TABLES.csv`
 - Schema warning artifact: local-only `artifacts/exports/ERAS_MDB_SCHEMA.md`
+- Human decisions: `docs/reviews/ERAS_MDB_HUMAN_DECISIONS_20260424.csv`
 
 ## Count Clarification
 

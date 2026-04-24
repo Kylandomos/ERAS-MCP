@@ -80,6 +80,10 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Full source_path or analysis_path of the MDB candidate to explain.",
     )
+    subparsers.add_parser(
+        "eras-review-status",
+        help="Validate ERAS MDB human review decisions.",
+    )
     subparsers.add_parser("powermap-status", help="Summarize PowerMap inventory status.")
     subparsers.add_parser(
         "powermap-list-workspaces", help="List PowerMap workspace path candidates."
@@ -118,6 +122,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "eras-explain-database":
         _dump_json(facade.eras_explain_database(database_path=args.path))
+        return 0
+    if args.command == "eras-review-status":
+        _dump_json(facade.eras_review_status())
         return 0
     if args.command == "powermap-status":
         _dump_json(facade.powermap_status())

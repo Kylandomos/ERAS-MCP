@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -10,6 +11,7 @@ from services import (
     SearchBounds,
     find_artifacts_safe,
     rank_mdb_candidates,
+    validate_mdb_human_decisions,
 )
 
 DEFAULT_PATTERNS = [
@@ -91,6 +93,18 @@ class MCPFacade:
 
     def _export_path(self, filename: str) -> Path:
         return self.store.exports_root / filename
+
+    def _docs_path(self, *parts: str) -> Path:
+        return self.repo_root / "docs" / Path(*parts)
+
+    def _read_csv_with_columns(
+        self, path: Path
+    ) -> tuple[list[dict[str, str]], list[str]]:
+        if not path.is_file():
+            return [], []
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            return [dict(row) for row in reader], list(reader.fieldnames or [])
 
     def _schema_warning_count(self) -> int:
         schema_path = self._export_path("ERAS_MDB_SCHEMA.md")
@@ -522,6 +536,47 @@ class MCPFacade:
             "matches": [item.to_dict() for item in matches[:10]],
         }
 
+    def eras_review_status(self) -> dict[str, Any]:
+        scorecard_path = self._docs_path(
+            "schemas", "ERAS_MDB_CANDIDATE_SCORECARD.csv"
+        )
+        decisions_path = self._docs_path(
+            "reviews", "ERAS_MDB_HUMAN_DECISIONS_20260424.csv"
+        )
+        scorecard_rows, _ = self._read_csv_with_columns(scorecard_path)
+        decision_rows, decision_columns = self._read_csv_with_columns(decisions_path)
+        validation = validate_mdb_human_decisions(
+            scorecard_rows=scorecard_rows,
+            decision_rows=decision_rows,
+            decision_columns=decision_columns,
+        )
+        warnings = validation.warnings.copy()
+        if not scorecard_rows:
+            warnings.append("Scorecard file is missing or empty.")
+        if not decision_rows:
+            warnings.append("Human decisions file is missing or empty.")
+
+        return {
+            "generated_at_utc": _now_utc(),
+            "read_only": True,
+            "source_artifact": {
+                "scorecard": str(scorecard_path),
+                "human_decisions": str(decisions_path),
+            },
+            "warnings": warnings,
+            "counts": validation.counts,
+            "decision_status": validation.decision_status,
+            "data_policy": "metadata_only_no_business_row_values",
+            "allowed_review_statuses": [
+                "needs_followup",
+                "accept_review",
+                "reject_review",
+            ],
+            "accepted_reviews": validation.accepted_reviews,
+            "rejected_reviews": validation.rejected_reviews,
+            "pending_review_sample": validation.pending_reviews[:10],
+        }
+
     def powermap_status(self) -> dict[str, Any]:
         inventory = self._latest_inventory()
         inventory_path = self.store.latest_inventory_path()
@@ -671,6 +726,10 @@ def eras_rank_databases(limit: int = 10, include_all: bool = False) -> dict[str,
 
 def eras_explain_database(database_path: str) -> dict[str, Any]:
     return _DEFAULT_FACADE.eras_explain_database(database_path=database_path)
+
+
+def eras_review_status() -> dict[str, Any]:
+    return _DEFAULT_FACADE.eras_review_status()
 
 
 def powermap_status() -> dict[str, Any]:
